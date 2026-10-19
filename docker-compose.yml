@@ -1,0 +1,86 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: research_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-research_assistant}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secure_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - research_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-research_assistant}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: research_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENV: production
+      DEBUG: "false"
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres_secure_pass}@db:5432/${POSTGRES_DB:-research_assistant}
+      DATABASE_FALLBACK_SQLITE: "false"
+      DATABASE_POOL_SIZE: 10
+      DATABASE_MAX_OVERFLOW: 20
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: 1440
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      CORS_ORIGINS: '["http://localhost", "http://localhost:80", "http://127.0.0.1"]'
+      MAX_CONCURRENT_RESEARCH_JOBS_PER_USER: 2
+      MAX_CONCURRENT_RESEARCH_JOBS_GLOBAL: 10
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    networks:
+      - research_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/liveness"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: research_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - research_net
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+networks:
+  research_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  app_data:
+  app_logs:

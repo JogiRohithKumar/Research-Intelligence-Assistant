@@ -1,0 +1,121 @@
+import { useState } from 'react';
+
+/**
+ * LegalModal component providing honest, clear Privacy Policy and Terms of Service.
+ * Complies with Stage 9 public release criteria: zero marketing fluff, zero fake certifications.
+ */
+export default function LegalModal({ isOpen, initialTab = 'privacy', onClose }) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="legal-modal-title"
+    >
+      <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-2xl w-full p-6 text-slate-200 shadow-2xl relative my-8">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <div className="flex space-x-4">
+            <button
+              id="legal-tab-privacy"
+              onClick={() => setActiveTab('privacy')}
+              className={`text-sm font-semibold pb-1 transition-colors border-b-2 ${
+                activeTab === 'privacy'
+                  ? 'border-indigo-500 text-indigo-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Privacy Policy
+            </button>
+            <button
+              id="legal-tab-terms"
+              onClick={() => setActiveTab('terms')}
+              className={`text-sm font-semibold pb-1 transition-colors border-b-2 ${
+                activeTab === 'terms'
+                  ? 'border-indigo-500 text-indigo-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              Terms of Service
+            </button>
+          </div>
+          <button
+            id="legal-modal-close"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-200 p-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            aria-label="Close dialog"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4 text-xs leading-relaxed text-slate-300">
+          {activeTab === 'privacy' ? (
+            <div className="space-y-3">
+              <h3 id="legal-modal-title" className="text-sm font-bold text-slate-100">Privacy Policy</h3>
+              <p className="text-[11px] text-slate-400">Effective Date: October 2026</p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">1. Information We Collect</h4>
+              <p>
+                We collect information necessary to deliver scholarly research synthesis: account identifiers (username, email address, cryptographically derived password hashes via PBKDF2/BCrypt), submitted research queries, and generated research session artifacts.
+              </p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">2. How Your Data Is Processed</h4>
+              <p>
+                Research queries are processed through retrieval engines querying public scholarly databases (e.g. ArXiv) and Google Gemini API for evidence extraction. We enforce strict server-side multi-tenant isolation: your sessions and reports are private to your authenticated user account.
+              </p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">3. Data Storage & Security</h4>
+              <p>
+                Application data is stored in durable relational databases with parameterized queries and strict foreign key constraints. Access tokens use cryptographically signed JWTs with server-side revocation on logout. Internal logs scrub all API keys, passwords, and sensitive tokens automatically.
+              </p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">4. Data Retention & User Rights</h4>
+              <p>
+                You may delete research sessions and associated history from the workspace at any time. When a session is deleted, associated runs, claims, and reports are permanently removed from the relational database via cascading deletion.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <h3 id="legal-modal-title" className="text-sm font-bold text-slate-100">Terms of Service</h3>
+              <p className="text-[11px] text-slate-400">Effective Date: October 2026</p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">1. Research Intelligence Use</h4>
+              <p>
+                The Research Intelligence Assistant is designed for scientific literature exploration, cross-paper comparison, and evidence-grounded research analysis. All synthesis and consensus findings reflect the retrieved corpus only.
+              </p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">2. No Professional Advice</h4>
+              <p>
+                The outputs generated by this system are for informational and academic exploratory purposes. They do not constitute certified medical, clinical, legal, financial, or engineering advice. Always consult primary source peer-reviewed literature and licensed professionals for critical decision-making.
+              </p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">3. Acceptable Use</h4>
+              <p>
+                You agree not to use the service for malicious activities, including attempting unauthorized cross-tenant data access, reverse engineering security controls, bypassing rate limits, or flooding search provider APIs.
+              </p>
+
+              <h4 className="font-semibold text-slate-200 mt-2">4. Limitation of Liability</h4>
+              <p>
+                This software is provided "as is" without warranty of any kind. While the system implements multi-stage citation verification and contradiction detection, we do not warrant that all scholarly literature on a given topic is comprehensively retrieved or free from publication bias in upstream sources.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+          <button
+            id="legal-modal-acknowledge"
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-lg transition-colors focus:ring-2 focus:ring-indigo-500"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

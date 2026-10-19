@@ -5,7 +5,8 @@ def retry_execute(
     func,
     *args,
     retries=3,
-    delay=5
+    delay=5,
+    **kwargs
 ):
 
     last_error = None
@@ -14,7 +15,7 @@ def retry_execute(
 
         try:
 
-            return func(*args)
+            return func(*args, **kwargs)
 
         except Exception as e:
 

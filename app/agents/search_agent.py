@@ -1,110 +1,66 @@
+"""
+Search Agent for Research Intelligence Assistant V2.
+Delegates retrieval to ResearchSearchEngine and formats canonical normalized paper records.
+"""
 
-import requests
-import xml.etree.ElementTree as ET
+from typing import Any, Dict, List, Optional
 
-from app.agents.query_rewriter import rewrite_query
+from app.core.config import get_settings
+from app.core.logging import logger
+from app.models.domain import NormalizedPaper, SearchPlan
+from app.search.engine import ResearchSearchEngine
+from app.search.ranker import QueryRanker
 
-
-def is_relevant(paper, query):
-
-    text = (paper["title"] + " " + paper["abstract"]).lower()
-
-    important = [
-        "llm", "gpt", "transformer",
-        "education", "learning",
-        "language model"
-    ]
-
-    score = sum(1 for k in important if k in text)
-
-    return score >= 2
+_search_engine: Optional[ResearchSearchEngine] = None
 
 
-def search_papers(query):
-    optimized_query = rewrite_query(query)
+def get_search_engine() -> ResearchSearchEngine:
+    """Returns singleton ResearchSearchEngine instance."""
+    global _search_engine
+    if _search_engine is None:
+        _search_engine = ResearchSearchEngine()
+    return _search_engine
 
-    print(
-        "\nOptimized Query:",
-        optimized_query
+
+def calculate_query_relevance(paper: Dict[str, Any], query: str) -> float:
+    """
+    Backwards-compatible query relevance calculation.
+    Uses QueryRanker to evaluate paper relevance without hardcoded topic keywords.
+    """
+    ranker = QueryRanker()
+    mock_paper = NormalizedPaper(
+        id=paper.get("id", "paper"),
+        paper_id=paper.get("id", "paper"),
+        title=paper.get("title", ""),
+        authors=paper.get("authors", []),
+        abstract=paper.get("abstract", ""),
+        published=paper.get("published", ""),
+        paper_url=paper.get("paper_url", ""),
+        doi=paper.get("doi")
     )
-
-    url = (
-        "http://export.arxiv.org/api/query?"
-        f"search_query=ti:{optimized_query}+OR+abs:{optimized_query}"
-        "&start=0"
-        "&max_results=15"
+    plan = SearchPlan(
+        original_query=query,
+        normalized_query=query.lower(),
+        primary_query=query,
+        alternative_queries=[],
+        key_concepts=[],
+        intent="scholarly_literature_review"
     )
+    return ranker.calculate_score(mock_paper, plan)
 
-    response = requests.get(
-        url,
-        timeout=30
-    )
 
-    root = ET.fromstring(
-        response.content
-    )
+def search_papers(
+    query: str,
+    search_plan: Optional[SearchPlan] = None,
+    limit: Optional[int] = None
+) -> List[Dict[str, Any]]:
+    """
+    Executes search and retrieval using the Stage 2 ResearchSearchEngine.
+    Returns serialized NormalizedPaper records.
+    """
+    engine = get_search_engine()
+    result = engine.search(query=query, plan=search_plan, limit=limit)
+    papers: List[NormalizedPaper] = result.get("papers", [])
 
-    namespace = {
-        "atom": "http://www.w3.org/2005/Atom"
-    }
-
-    papers = []
-
-    for entry in root.findall(
-        "atom:entry",
-        namespace
-    ):
-        authors = []
-
-        for author in entry.findall(
-            "atom:author",
-            namespace
-        ):
-            authors.append(
-                author.find(
-                    "atom:name",
-                    namespace
-                ).text
-            )
-
-        papers.append(
-            {
-                "title": entry.find(
-                    "atom:title",
-                    namespace
-                ).text.strip(),
-
-                "authors": authors,
-
-                "abstract": entry.find(
-                    "atom:summary",
-                    namespace
-                ).text.strip(),
-
-                "published": entry.find(
-                    "atom:published",
-                    namespace
-                ).text,
-
-                "paper_url": entry.find(
-                    "atom:id",
-                    namespace
-                ).text
-            }
-        )
-
-    filtered_papers = [
-        paper
-        for paper in papers
-        if is_relevant(
-            paper,
-            optimized_query
-        )
-    ]
-
-    print(
-        f"Found {len(filtered_papers)} relevant papers"
-    )
-
-    return filtered_papers[:5]
-
+    # Return list of dictionaries conforming to NormalizedPaper / CandidatePaper
+    return [p.model_dump() for p in papers]

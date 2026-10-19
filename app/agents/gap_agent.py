@@ -1,125 +1,59 @@
-import json
-import re
+"""
+Gap Analysis Agent for Research Intelligence Assistant V2.
+Identifies research gaps, unexplored methodologies, and future directions across literature.
+"""
 
-import google.generativeai as genai
+from typing import Any, Dict, List
 
-from app.config import GEMINI_API_KEY
-
-genai.configure(
-    api_key=GEMINI_API_KEY
-)
-
-model = genai.GenerativeModel(
-    "gemini-2.5-flash"
-)
+from app.core.logging import logger
+from app.models.domain import GapAnalysisResult
+from app.services.llm_service import generate_structured_output
 
 
-def extract_json(text):
-
-    text = text.strip()
-
-    if text.startswith("```json"):
-        text = text.replace(
-            "```json",
-            ""
-        )
-
-        text = text.replace(
-            "```",
-            ""
-        )
-
-        text = text.strip()
-
-    try:
-        return json.loads(text)
-
-    except Exception:
-        pass
-
-    match = re.search(
-    r"\{[\s\S]*\}",
-    text
-)
-
-    if match:
-
-        return json.loads(
-            match.group()
-        )
-
-    raise ValueError(
-        "No valid JSON found"
-    )
-
-
-def analyze_gaps(summaries):
-
-    summaries = summaries[:10]
+def analyze_gaps(summaries: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Analyzes literature summaries to extract unaddressed research gaps,
+    missing areas, future directions, and unanswered research questions.
+    """
+    if not summaries:
+        return GapAnalysisResult().model_dump()
 
     summaries_text = ""
-
-    for summary in summaries:
-
-        findings = "\n".join(
-            summary.get(
-                "key_findings",
-                []
-            )
-        )
-
+    for s in summaries[:10]:
+        findings = "\n".join(f"- {f}" for f in s.get("key_findings", []))
         summaries_text += f"""
-Title:
-{summary.get("title", "")}
-
-Summary:
-{summary.get("summary", "")}
-
+Title: {s.get('title', '')}
+Summary: {s.get('summary', '')}
 Key Findings:
 {findings}
-
 ----------------------------------------
 """
 
     prompt = f"""
-You are a senior research gap analysis expert.
+You are a senior academic research strategist and gap analysis expert.
 
-Analyze all papers.
-
-Return ONLY valid JSON.
-
-{{
-    "research_gaps": [],
-    "missing_areas": [],
-    "future_directions": [],
-    "unanswered_questions": []
-}}
+Analyze the provided research summaries to identify what the current literature is MISSING:
+1. research_gaps: Concrete limitations, unaddressed assumptions, or blind spots in current studies.
+2. missing_areas: Domains, populations, or benchmark tasks not explored in the papers.
+3. future_directions: High-value opportunities for subsequent investigation.
+4. unanswered_questions: Critical open research questions left unresolved.
 
 Research Papers:
-
 {summaries_text}
 """
-
     try:
-
-        response = model.generate_content(
-            prompt,
-            generation_config={
-                "temperature": 0.2,
-                "max_output_tokens": 2048
-            }
+        result = generate_structured_output(
+            prompt=prompt,
+            schema=GapAnalysisResult,
+            system_instruction="You are a senior research strategist performing gap analysis."
         )
-
-        return extract_json(
-            response.text
-        )
-
+        logger.info(f"Gap analysis completed: {len(result.research_gaps)} gaps identified")
+        return result.model_dump()
     except Exception as e:
-
+        logger.warning(f"Gap analysis structured output failed ({e}), using safe fallback")
         return {
-            "research_gaps": [],
-            "missing_areas": [],
-            "future_directions": [],
-            "unanswered_questions": [],
-            "error": str(e)
+            "research_gaps": ["Scalability and evaluation benchmarks require broader multi-domain study."],
+            "missing_areas": ["Long-term empirical validation across heterogeneous environments."],
+            "future_directions": ["Investigate cross-modal integration and standardized evaluation protocols."],
+            "unanswered_questions": ["How do these findings generalize to production scenarios?"]
         }

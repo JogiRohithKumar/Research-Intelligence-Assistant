@@ -1,36 +1,40 @@
-import google.generativeai as genai
+"""
+Query Rewriter Agent for Research Intelligence Assistant V2.
+Transforms user research topics into targeted academic search queries.
+"""
 
-from app.config import GEMINI_API_KEY
+from app.core.logging import logger
+from app.services.llm_service import generate_text
 
-genai.configure(
-api_key=GEMINI_API_KEY
-)
 
-model = genai.GenerativeModel(
-"gemini-2.5-flash"
-)
-
-def rewrite_query(query: str):
-
-    prompt = f"""
-
-    Convert the research topic into a concise academic search query.
-    If paper is NOT in dataset, explicitly say:
-    "Not found in retrieved papers"
-    Do NOT use external knowledge
-    Rules:
-
-    Add important synonyms
-    Add related keywords
-    Keep under 15 words
-    Return only the search query
-
-    Topic:
-    {query}
+def rewrite_query(query: str) -> str:
     """
+    Transforms natural language research questions into concise academic search queries.
+    Gracefully falls back to original query on any failure.
+    """
+    prompt = f"""
+Convert the following research topic into an optimized, concise academic search query suitable for arXiv and scientific literature databases.
 
-    response = model.generate_content(
-        prompt
-    )
+Rules:
+- Include essential domain keywords and academic synonyms.
+- Avoid stop words, conversational filler, and punctuation.
+- Keep the final search query under 12 words.
+- Return ONLY the search query string, nothing else.
 
-    return response.text.strip()
+Topic:
+{query}
+"""
+    try:
+        optimized = generate_text(
+            prompt=prompt,
+            system_instruction="You are an expert scientific literature search specialist."
+        )
+        # Clean any quotes or multiple lines
+        cleaned = optimized.replace('"', "").replace("\n", " ").strip()
+        if cleaned:
+            logger.info(f"Query rewritten: '{query}' -> '{cleaned}'")
+            return cleaned
+    except Exception as e:
+        logger.warning(f"Query rewriting failed ({e}); falling back to original query")
+
+    return query

@@ -1,18 +1,60 @@
-# Node / React
-node_modules/
-dist/
-build/
+# Environment & Secrets (MUST NEVER BE COMMITTED)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
 
-# Python / FastAPI
+# Python Virtual Environments & Bytecode
+.venv/
+.venv*/
+venv/
+ENV/
+env/
 __pycache__/
 *.py[cod]
-.venv/
-venv/
-.env
+*.pyo
+*.pyd
 
-# Databases & Vector Stores
+# Node / Frontend Build Outputs
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+dist-ssr/
+build/
+*.local
+
+# Databases, Backups & Vector Stores
 *.db
 *.db-shm
 *.db-wal
+*.sqlite
 *.sqlite3
 app/db/chroma/
+chroma/
+backups/
+*.dump
+
+# Logs & Monitoring
+*.log
+logs/
+logs.jsonl
+*.jsonl
+
+# Testing & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+evaluation/reports/
+
+# Scratch & Local IDE Artifacts
+scratch/
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
