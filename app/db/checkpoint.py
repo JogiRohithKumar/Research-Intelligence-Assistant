@@ -44,11 +44,15 @@ def get_checkpointer() -> BaseCheckpointSaver:
 
             if _pool is None or _pool.closed:
                 _pool = ConnectionPool(
-                    conninfo=psycopg_uri,
-                    min_size=1,
-                    max_size=settings.DATABASE_POOL_SIZE,
-                    open=True
-                )
+                conninfo=psycopg_uri,
+                min_size=1,
+                max_size=settings.DATABASE_POOL_SIZE,
+                kwargs={
+                    "autocommit": True,
+                    "prepare_threshold": 0,
+                },
+                open=True
+            )
 
             saver = PostgresSaver(_pool)
             # Execute versioned internal migrations for checkpoints tables
