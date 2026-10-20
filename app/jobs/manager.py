@@ -242,6 +242,7 @@ class JobManager:
                 completed_at=utc_now()
             )
             db.add(research_run)
+            db.flush()
 
             # Persist iterations
             iterations = result.get("iterations_history") or []
@@ -318,6 +319,7 @@ class JobManager:
             logger.error(f"Research job='{job_id}' failed: {err}", exc_info=True)
 
             try:
+                db.rollback()
                 job = db.query(ResearchJob).filter(ResearchJob.id == job_id).first()
                 if job:
                     job.status = "FAILED"
