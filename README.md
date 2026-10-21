@@ -1,5 +1,5 @@
 # Research Intelligence Assistant
-
+**Live Demo:** [https://multi-agent-research-assistant-hmcd5iedk.vercel.app/](https://multi-agent-research-assistant-hmcd5iedk.vercel.app/)
 A research workspace that retrieves scholarly literature, grounds claims in evidence, compares findings across papers, and produces a traceable research report through a controlled LangGraph workflow.
 
 ## Overview
